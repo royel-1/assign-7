@@ -1,56 +1,76 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
-require("dotenv").config(); // .env file ko load karta hai
+const cors = require("cors");
+require("dotenv").config();
 
-const Student = require("./models/student");
+const User = require("./models/User");
+
 const app = express();
 
-app.use(bodyParser.json());
+// Middleware
+app.use(express.json());
+app.use(cors());
 
-// MongoDB connect
-mongoose.connect(process.env.MONGODB_URI)
-.then(() => console.log(" MongoDB Connected"))
-.catch((err) => console.log("Mongo Error:", err));
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("MongoDB Connected"))
+.catch((err) => console.log(err));
 
-app.get("/students", async (req, res) => {
-  const students = await Student.find();
-  res.send(students);
+// =======================
+// CREATE API
+// =======================
+app.post("/addUser", async (req, res) => {
+    try {
+        const user = new User(req.body);
+        await user.save();
+        res.json(user);
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-// Get student by name
-app.get("/students/:name", async (req, res) => {
-  const { name } = req.params;
-  const students = await Student.find({ name });
-  res.send(students);
+// =======================
+// READ API
+// =======================
+app.get("/getUsers", async (req, res) => {
+    try {
+        const users = await User.find();
+        res.json(users);
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-// Add student
-app.post("/add-student", async (req, res) => {
-  const { name, marks } = req.body;
-  const newStudent = new Student({ name, marks });
-  await newStudent.save();
-  res.send("Student added");
+// =======================
+// UPDATE API
+// =======================
+app.put("/updateUser/:id", async (req, res) => {
+    try {
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+
+        res.json(user);
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-//  Delete student
-app.delete("/delete-student/:name", async (req, res) => {
-  const { name } = req.params;
-  await Student.findOneAndDelete({ name });
-  res.send("Student deleted");
+// =======================
+// DELETE API
+// =======================
+app.delete("/deleteUser/:id", async (req, res) => {
+    try {
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ message: "User Deleted" });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-// Update student
-app.put("/update", async (req, res) => {
-  const { name, marks } = req.body;
-  const updated = await Student.findOneAndUpdate(
-    { name },
-    { $set: { marks } },
-    { new: true }
-  );
-  res.send(updated);
-});
-
+// Server
 app.listen(process.env.PORT, () => {
-  console.log(` Server is running on port ${process.env.PORT}`);
+    console.log(`Server Running on Port ${process.env.PORT}`);
 });
